@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Vista del Cliente - Junta de Cobros</title>
+  <style>
+    body { font-family: Arial; background: #f4f4f4; padding: 20px; }
+    h2 { color: #333; }
+    table { width: 100%; background: white; border-collapse: collapse; border-radius: 8px; box-shadow: 0 0 10px #ccc; }
+    th, td { padding: 10px; border: 1px solid #ccc; text-align: center; }
+    .pago { background-color: #d4edda; }
+    .no-pago { background-color: #f8d7da; }
+  </style>
+</head>
+<body>
+
+<h2>CLIENTE - Historial de Pagos</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Fecha</th>
+      <th>Día</th>
+      <th>Pagó</th>
+      <th>Monto</th>
+    </tr>
+  </thead>
+  <tbody id="tablaCliente"></tbody>
+</table>
+
+<script>
+  const tabla = document.getElementById('tablaCliente');
+  const registros = JSON.parse(localStorage.getItem("registrosCobro")) || [];
+
+  registros.forEach(reg => {
+    const fila = document.createElement("tr");
+    fila.className = reg.pago === "Sí" ? "pago" : "no-pago";
+    fila.innerHTML = `
+      <td>${reg.fecha}</td>
+      <td>${reg.dia}</td>
+      <td>${reg.pago}</td>
+      <td>S/ ${reg.pago === "Sí" ? reg.monto : "0.00"}</td>
+    `;
+    tabla.appendChild(fila);
+  });
+</script>
+
+</body>
+</html>
