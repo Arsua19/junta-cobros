@@ -13,14 +13,6 @@
     th, td { padding: 10px; border: 1px solid #ccc; text-align: center; }
     .pago { background-color: #d4edda; }
     .no-pago { background-color: #f8d7da; }
-    .btn-eliminar {
-      background: red;
-      color: white;
-      border: none;
-      padding: 5px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
   </style>
 </head>
 <body>
@@ -30,89 +22,82 @@
 <form id="formulario">
   <label>Fecha:</label>
   <input type="date" id="fecha" required>
-
   <label>Día:</label>
   <input type="text" id="dia" required>
-
   <label>¿Pagó?:</label>
   <select id="pago">
     <option value="Sí">Sí</option>
     <option value="No">No</option>
   </select>
-
   <label>Monto (S/):</label>
   <input type="number" id="monto" min="0" step="0.01" required>
-
   <button type="submit">Agregar Registro</button>
 </form>
 
-<table id="tablaRegistros">
+<table>
   <thead>
     <tr>
       <th>Fecha</th>
       <th>Día</th>
-      <th>¿Pagó?</th>
-      <th>Monto (S/)</th>
-      <th>Acciones</th>
+      <th>Pagó</th>
+      <th>Monto</th>
     </tr>
   </thead>
-  <tbody>
-    <!-- Registros se agregarán aquí -->
-  </tbody>
+  <tbody id="tablaRegistros"></tbody>
 </table>
 
-<script>
-  const formulario = document.getElementById("formulario");
-  const tablaRegistros = document.getElementById("tablaRegistros").querySelector("tbody");
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  let registros = JSON.parse(localStorage.getItem("registrosCobro")) || [];
+  const firebaseConfig = {
+    apiKey: "AIzaSyAapctHWYLZQB2AJq93PaHIO8a-D525h84",
+    authDomain: "junta-cobros.firebaseapp.com",
+    projectId: "junta-cobros",
+    storageBucket: "junta-cobros.firebasestorage.app",
+    messagingSenderId: "114984888186",
+    appId: "1:114984888186:web:f526903357bb8039d618c3"
+  };
 
-  function renderizarTabla() {
-    tablaRegistros.innerHTML = "";
-    registros.forEach((reg, index) => {
-      const fila = document.createElement("tr");
-      fila.className = reg.pago === "Sí" ? "pago" : "no-pago";
-      fila.innerHTML = `
-        <td>${reg.fecha}</td>
-        <td>${reg.dia}</td>
-        <td>${reg.pago}</td>
-        <td>S/ ${parseFloat(reg.monto).toFixed(2)}</td>
-        <td><button class="btn-eliminar" data-index="${index}">Eliminar</button></td>
-      `;
-      tablaRegistros.appendChild(fila);
-    });
-  }
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
 
-  // Mostrar al cargar
-  renderizarTabla();
+  const form = document.getElementById("formulario");
+  const tabla = document.getElementById("tablaRegistros");
 
-  // Agregar nuevo registro
-  formulario.addEventListener("submit", function(event) {
-    event.preventDefault();
-
-    const nuevoRegistro = {
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const nuevo = {
       fecha: document.getElementById("fecha").value,
       dia: document.getElementById("dia").value,
       pago: document.getElementById("pago").value,
       monto: parseFloat(document.getElementById("monto").value).toFixed(2)
     };
-
-    registros.push(nuevoRegistro);
-    localStorage.setItem("registrosCobro", JSON.stringify(registros));
-    renderizarTabla();
-    formulario.reset();
+    await addDoc(collection(db, "registrosCobro"), nuevo);
+    form.reset();
+    cargarRegistros();
   });
 
-  // Eliminar registro
-  tablaRegistros.addEventListener("click", function(event) {
-    if (event.target.classList.contains("btn-eliminar")) {
-      const index = event.target.getAttribute("data-index");
-      registros.splice(index, 1);
-      localStorage.setItem("registrosCobro", JSON.stringify(registros));
-      renderizarTabla();
-    }
-  });
+  async function cargarRegistros() {
+    tabla.innerHTML = "";
+    const snapshot = await getDocs(collection(db, "registrosCobro"));
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const fila = document.createElement("tr");
+      fila.className = data.pago === "Sí" ? "pago" : "no-pago";
+      fila.innerHTML = `
+        <td>${data.fecha}</td>
+        <td>${data.dia}</td>
+        <td>${data.pago}</td>
+        <td>S/ ${data.pago === "Sí" ? data.monto : "0.00"}</td>
+      `;
+      tabla.appendChild(fila);
+    });
+  }
+
+  cargarRegistros();
 </script>
 
 </body>
 </html>
+
