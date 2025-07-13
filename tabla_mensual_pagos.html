@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Pagos Mensuales por Día</title>
+  <style>
+    body { font-family: Arial; background: #f4f4f4; padding: 20px; }
+    h2 { color: #333; margin-top: 40px; }
+    table { width: 100%; background: white; border-collapse: collapse; border-radius: 8px; box-shadow: 0 0 10px #ccc; margin-top: 10px; margin-bottom: 30px; }
+    th, td { padding: 8px; border: 1px solid #ccc; text-align: center; }
+    .pago { color: green; font-weight: bold; }
+    .no-pago { color: red; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<h1>CLIENTE - Seguimiento de Pagos Mensual</h1>
+<div id="contenedorTablas"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAapctHWYLZQB2AJq93PaHIO8a-D525h84",
+    authDomain: "junta-cobros.firebaseapp.com",
+    projectId: "junta-cobros",
+    storageBucket: "junta-cobros.firebasestorage.app",
+    messagingSenderId: "114984888186",
+    appId: "1:114984888186:web:f526903357bb8039d618c3"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const contenedor = document.getElementById("contenedorTablas");
+
+  // Generar días de un mes
+  function generarDiasDelMes(anio, mes) {
+    const dias = [];
+    const fecha = new Date(anio, mes - 1, 1);
+    while (fecha.getMonth() + 1 === mes) {
+      const dia = String(fecha.getDate()).padStart(2, '0');
+      const mesStr = String(mes).padStart(2, '0');
+      dias.push(`${anio}-${mesStr}-${dia}`);
+      fecha.setDate(fecha.getDate() + 1);
+    }
+    return dias;
+  }
+
+  async function cargarPagosMensuales() {
+    const registros = {};
+    const snapshot = await getDocs(collection(db, "registrosCobro"));
+
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.fecha) {
+        registros[data.fecha] = data.pago;
+      }
+    });
+
+    const meses = [
+      { mes: 7, nombre: "Julio", anio: 2025, desde: 12 },
+      { mes: 8, nombre: "Agosto", anio: 2025 },
+      { mes: 9, nombre: "Septiembre", anio: 2025 },
+      { mes: 10, nombre: "Octubre", anio: 2025 },
+      { mes: 11, nombre: "Noviembre", anio: 2025 },
+      { mes: 12, nombre: "Diciembre", anio: 2025 },
+      { mes: 1, nombre: "Enero", anio: 2026 }
+    ];
+
+    meses.forEach(({ mes, nombre, anio, desde = 1 }) => {
+      const dias = generarDiasDelMes(anio, mes);
+      const tabla = document.createElement("table");
+      const titulo = document.createElement("h2");
+      titulo.textContent = `${nombre} ${anio}`;
+      const thead = `<thead><tr><th>Fecha</th><th>Estado</th></tr></thead>`;
+      const tbody = document.createElement("tbody");
+
+      dias.forEach(fecha => {
+        const diaNum = parseInt(fecha.split("-")[2], 10);
+        if (diaNum < desde) return;
+
+        const pago = registros[fecha];
+        const estado = pago === "Sí" ? "✅" : "❌";
+        const clase = pago === "Sí" ? "pago" : "no-pago";
+
+        const fila = document.createElement("tr");
+        fila.innerHTML = `
+          <td>${fecha}</td>
+          <td class="${clase}">${estado}</td>
+        `;
+        tbody.appendChild(fila);
+      });
+
+      tabla.innerHTML = thead;
+      tabla.appendChild(tbody);
+      contenedor.appendChild(titulo);
+      contenedor.appendChild(tabla);
+    });
+  }
+
+  cargarPagosMensuales();
+</script>
+
+</body>
+</html>
