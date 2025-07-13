@@ -13,6 +13,8 @@
     th, td { padding: 10px; border: 1px solid #ccc; text-align: center; }
     .pago { background-color: #d4edda; }
     .no-pago { background-color: #f8d7da; }
+    .btn-eliminar { background: red; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+    .btn-editar { background: orange; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
   </style>
 </head>
 <body>
@@ -41,6 +43,7 @@
       <th>Día</th>
       <th>Pagó</th>
       <th>Monto</th>
+      <th>Acciones</th>
     </tr>
   </thead>
   <tbody id="tablaRegistros"></tbody>
@@ -48,7 +51,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAapctHWYLZQB2AJq93PaHIO8a-D525h84",
@@ -81,8 +84,8 @@
   async function cargarRegistros() {
     tabla.innerHTML = "";
     const snapshot = await getDocs(collection(db, "registrosCobro"));
-    snapshot.forEach(doc => {
-      const data = doc.data();
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
       const fila = document.createElement("tr");
       fila.className = data.pago === "Sí" ? "pago" : "no-pago";
       fila.innerHTML = `
@@ -90,8 +93,44 @@
         <td>${data.dia}</td>
         <td>${data.pago}</td>
         <td>S/ ${data.pago === "Sí" ? data.monto : "0.00"}</td>
+        <td>
+          <button class="btn-editar" data-id="${docSnap.id}">Editar</button>
+          <button class="btn-eliminar" data-id="${docSnap.id}">Eliminar</button>
+        </td>
       `;
       tabla.appendChild(fila);
+    });
+
+    // Agregar eventos a botones
+    document.querySelectorAll(".btn-eliminar").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.id;
+        if (confirm("¿Seguro que deseas eliminar este registro?")) {
+          await deleteDoc(doc(db, "registrosCobro", id));
+          cargarRegistros();
+        }
+      });
+    });
+
+    document.querySelectorAll(".btn-editar").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.id;
+        const fila = btn.closest("tr");
+        const nuevaFecha = prompt("Nueva fecha:", fila.children[0].textContent);
+        const nuevoDia = prompt("Nuevo día:", fila.children[1].textContent);
+        const nuevoPago = prompt("¿Pagó? (Sí/No):", fila.children[2].textContent);
+        const nuevoMonto = prompt("Nuevo monto:", fila.children[3].textContent.replace("S/ ", ""));
+
+        if (nuevaFecha && nuevoDia && (nuevoPago === "Sí" || nuevoPago === "No") && nuevoMonto) {
+          await updateDoc(doc(db, "registrosCobro", id), {
+            fecha: nuevaFecha,
+            dia: nuevoDia,
+            pago: nuevoPago,
+            monto: parseFloat(nuevoMonto).toFixed(2)
+          });
+          cargarRegistros();
+        }
+      });
     });
   }
 
@@ -100,4 +139,5 @@
 
 </body>
 </html>
+
 
