@@ -28,21 +28,42 @@
   <tbody id="tablaCliente"></tbody>
 </table>
 
-<script>
-  const tabla = document.getElementById('tablaCliente');
-  const registros = JSON.parse(localStorage.getItem("registrosCobro")) || [];
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  registros.forEach(reg => {
-    const fila = document.createElement("tr");
-    fila.className = reg.pago === "Sí" ? "pago" : "no-pago";
-    fila.innerHTML = `
-      <td>${reg.fecha}</td>
-      <td>${reg.dia}</td>
-      <td>${reg.pago}</td>
-      <td>S/ ${reg.pago === "Sí" ? reg.monto : "0.00"}</td>
-    `;
-    tabla.appendChild(fila);
-  });
+  const firebaseConfig = {
+    apiKey: "AIzaSyAapctHWYLZQB2AJq93PaHIO8a-D525h84",
+    authDomain: "junta-cobros.firebaseapp.com",
+    projectId: "junta-cobros",
+    storageBucket: "junta-cobros.firebasestorage.app",
+    messagingSenderId: "114984888186",
+    appId: "1:114984888186:web:f526903357bb8039d618c3"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  const tabla = document.getElementById("tablaCliente");
+
+  async function cargarRegistros() {
+    tabla.innerHTML = "";
+    const snapshot = await getDocs(collection(db, "registrosCobro"));
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const fila = document.createElement("tr");
+      fila.className = data.pago === "Sí" ? "pago" : "no-pago";
+      fila.innerHTML = `
+        <td>${data.fecha}</td>
+        <td>${data.dia}</td>
+        <td>${data.pago}</td>
+        <td>S/ ${data.pago === "Sí" ? data.monto : "0.00"}</td>
+      `;
+      tabla.appendChild(fila);
+    });
+  }
+
+  cargarRegistros();
 </script>
 
 </body>
