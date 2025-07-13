@@ -10,6 +10,7 @@
     th, td { padding: 10px; border: 1px solid #ccc; text-align: center; }
     .pago { background-color: #d4edda; }
     .no-pago { background-color: #f8d7da; }
+    #totalPagado { margin-top: 20px; font-size: 18px; font-weight: bold; color: #155724; }
   </style>
 </head>
 <body>
@@ -28,6 +29,8 @@
   <tbody id="tablaCliente"></tbody>
 </table>
 
+<div id="totalPagado">Total pagado: S/ 0.00</div>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -45,22 +48,30 @@
   const db = getFirestore(app);
 
   const tabla = document.getElementById("tablaCliente");
+  const totalDiv = document.getElementById("totalPagado");
 
   async function cargarRegistros() {
     tabla.innerHTML = "";
+    let total = 0;
     const snapshot = await getDocs(collection(db, "registrosCobro"));
     snapshot.forEach(doc => {
       const data = doc.data();
       const fila = document.createElement("tr");
       fila.className = data.pago === "Sí" ? "pago" : "no-pago";
+
+      const monto = data.pago === "Sí" ? parseFloat(data.monto) : 0;
+      total += monto;
+
       fila.innerHTML = `
         <td>${data.fecha}</td>
         <td>${data.dia}</td>
         <td>${data.pago}</td>
-        <td>S/ ${data.pago === "Sí" ? data.monto : "0.00"}</td>
+        <td>S/ ${monto.toFixed(2)}</td>
       `;
       tabla.appendChild(fila);
     });
+
+    totalDiv.textContent = `Total pagado: S/ ${total.toFixed(2)}`;
   }
 
   cargarRegistros();
