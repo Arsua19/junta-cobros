@@ -1,57 +1,9 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Administrador - Junta de Cobros</title>
-  <style>
-    body { font-family: Arial; background: #f4f4f4; padding: 20px; }
-    h2 { color: #333; }
-    form, table { background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 0 10px #ccc; }
-    input, select { width: 100%; padding: 8px; margin: 5px 0; }
-    button { padding: 10px 15px; background: green; color: white; border: none; border-radius: 5px; cursor: pointer; }
-    table { width: 100%; margin-top: 20px; border-collapse: collapse; }
-    th, td { padding: 10px; border: 1px solid #ccc; text-align: center; }
-    .pago { background-color: #d4edda; }
-    .no-pago { background-color: #f8d7da; }
-    .btn-eliminar { background: red; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
-    .btn-editar { background: orange; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
-  </style>
-</head>
-<body>
-
-<h2>ADMINISTRADOR - Registrar Pagos</h2>
-
-<form id="formulario">
-  <label>Fecha:</label>
-  <input type="date" id="fecha" required>
-  <label>Día:</label>
-  <input type="text" id="dia" required>
-  <label>¿Pagó?:</label>
-  <select id="pago">
-    <option value="Sí">Sí</option>
-    <option value="No">No</option>
-  </select>
-  <label>Monto (S/):</label>
-  <input type="number" id="monto" min="0" step="0.01" required>
-  <button type="submit">Agregar Registro</button>
-</form>
-
-<table>
-  <thead>
-    <tr>
-      <th>Fecha</th>
-      <th>Día</th>
-      <th>Pagó</th>
-      <th>Monto</th>
-      <th>Acciones</th>
-    </tr>
-  </thead>
-  <tbody id="tablaRegistros"></tbody>
-</table>
-
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import {
+    getFirestore, collection, addDoc, getDocs, deleteDoc,
+    doc, updateDoc, query, orderBy
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAapctHWYLZQB2AJq93PaHIO8a-D525h84",
@@ -70,11 +22,15 @@
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    const monto = parseFloat(document.getElementById("monto").value).toFixed(2);
+    const diasPagados = Math.floor(monto / 70);
+
     const nuevo = {
       fecha: document.getElementById("fecha").value,
       dia: document.getElementById("dia").value,
       pago: document.getElementById("pago").value,
-      monto: parseFloat(document.getElementById("monto").value).toFixed(2)
+      monto,
+      diasPagados
     };
     await addDoc(collection(db, "registrosCobro"), nuevo);
     form.reset();
@@ -83,7 +39,10 @@
 
   async function cargarRegistros() {
     tabla.innerHTML = "";
-    const snapshot = await getDocs(collection(db, "registrosCobro"));
+
+    const q = query(collection(db, "registrosCobro"), orderBy("fecha"));
+    const snapshot = await getDocs(q);
+
     snapshot.forEach(docSnap => {
       const data = docSnap.data();
       const fila = document.createElement("tr");
@@ -93,6 +52,7 @@
         <td>${data.dia}</td>
         <td>${data.pago}</td>
         <td>S/ ${data.pago === "Sí" ? data.monto : "0.00"}</td>
+        <td>${data.pago === "Sí" ? data.diasPagados || 0 : 0} día(s)</td>
         <td>
           <button class="btn-editar" data-id="${docSnap.id}">Editar</button>
           <button class="btn-eliminar" data-id="${docSnap.id}">Eliminar</button>
@@ -101,7 +61,7 @@
       tabla.appendChild(fila);
     });
 
-    // Agregar eventos a botones
+    // Eliminar
     document.querySelectorAll(".btn-eliminar").forEach(btn => {
       btn.addEventListener("click", async () => {
         const id = btn.dataset.id;
@@ -112,6 +72,7 @@
       });
     });
 
+    // Editar
     document.querySelectorAll(".btn-editar").forEach(btn => {
       btn.addEventListener("click", async () => {
         const id = btn.dataset.id;
@@ -122,11 +83,13 @@
         const nuevoMonto = prompt("Nuevo monto:", fila.children[3].textContent.replace("S/ ", ""));
 
         if (nuevaFecha && nuevoDia && (nuevoPago === "Sí" || nuevoPago === "No") && nuevoMonto) {
+          const diasPagados = Math.floor(parseFloat(nuevoMonto) / 70);
           await updateDoc(doc(db, "registrosCobro", id), {
             fecha: nuevaFecha,
             dia: nuevoDia,
             pago: nuevoPago,
-            monto: parseFloat(nuevoMonto).toFixed(2)
+            monto: parseFloat(nuevoMonto).toFixed(2),
+            diasPagados
           });
           cargarRegistros();
         }
@@ -136,8 +99,3 @@
 
   cargarRegistros();
 </script>
-
-</body>
-</html>
-
-
