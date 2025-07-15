@@ -6,11 +6,27 @@
   <style>
     body { font-family: Arial; background: #f4f4f4; padding: 20px; }
     h2 { color: #333; }
-    table { width: 100%; background: white; border-collapse: collapse; border-radius: 8px; box-shadow: 0 0 10px #ccc; }
-    th, td { padding: 10px; border: 1px solid #ccc; text-align: center; }
+    table {
+      width: 100%;
+      background: white;
+      border-collapse: collapse;
+      border-radius: 8px;
+      box-shadow: 0 0 10px #ccc;
+      margin-top: 20px;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
     .pago { background-color: #d4edda; }
     .no-pago { background-color: #f8d7da; }
-    #totalPagado, #totalDias { margin-top: 20px; font-size: 18px; font-weight: bold; color: #155724; }
+    #totalPagado, #totalDias {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #155724;
+    }
   </style>
 </head>
 <body>
@@ -65,22 +81,25 @@
 
     snapshot.forEach(doc => {
       const data = doc.data();
-      const fila = document.createElement("tr");
-      fila.className = data.pago === "Sí" ? "pago" : "no-pago";
 
+      // Solo consideramos pagos confirmados
       const monto = data.pago === "Sí" ? parseFloat(data.monto) : 0;
       const diasPagados = data.pago === "Sí" ? Math.floor(monto / 70) : 0;
 
       totalMonto += monto;
       totalDias += diasPagados;
 
+      const fila = document.createElement("tr");
+      fila.className = data.pago === "Sí" ? "pago" : "no-pago";
+
       fila.innerHTML = `
         <td>${data.fecha}</td>
         <td>${data.dia}</td>
         <td>${data.pago}</td>
         <td>S/ ${monto.toFixed(2)}</td>
-        <td>${diasPagados} día(s)</td>
+        <td>${diasPagados}</td>
       `;
+
       tabla.appendChild(fila);
     });
 
