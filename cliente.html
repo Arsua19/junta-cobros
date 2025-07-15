@@ -10,7 +10,7 @@
     th, td { padding: 10px; border: 1px solid #ccc; text-align: center; }
     .pago { background-color: #d4edda; }
     .no-pago { background-color: #f8d7da; }
-    #totalPagado { margin-top: 20px; font-size: 18px; font-weight: bold; color: #155724; }
+    #totalPagado, #totalDias { margin-top: 20px; font-size: 18px; font-weight: bold; color: #155724; }
   </style>
 </head>
 <body>
@@ -24,16 +24,20 @@
       <th>Día</th>
       <th>Pagó</th>
       <th>Monto</th>
+      <th>Días Pagados</th>
     </tr>
   </thead>
   <tbody id="tablaCliente"></tbody>
 </table>
 
 <div id="totalPagado">Total pagado: S/ 0.00</div>
+<div id="totalDias">Total de días pagados: 0</div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import {
+    getFirestore, collection, getDocs, query, orderBy
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAapctHWYLZQB2AJq93PaHIO8a-D525h84",
@@ -49,29 +53,39 @@
 
   const tabla = document.getElementById("tablaCliente");
   const totalDiv = document.getElementById("totalPagado");
+  const totalDiasDiv = document.getElementById("totalDias");
 
   async function cargarRegistros() {
     tabla.innerHTML = "";
-    let total = 0;
-    const snapshot = await getDocs(collection(db, "registrosCobro"));
+    let totalMonto = 0;
+    let totalDias = 0;
+
+    const q = query(collection(db, "registrosCobro"), orderBy("fecha"));
+    const snapshot = await getDocs(q);
+
     snapshot.forEach(doc => {
       const data = doc.data();
       const fila = document.createElement("tr");
       fila.className = data.pago === "Sí" ? "pago" : "no-pago";
 
       const monto = data.pago === "Sí" ? parseFloat(data.monto) : 0;
-      total += monto;
+      const diasPagados = data.pago === "Sí" ? Math.floor(monto / 70) : 0;
+
+      totalMonto += monto;
+      totalDias += diasPagados;
 
       fila.innerHTML = `
         <td>${data.fecha}</td>
         <td>${data.dia}</td>
         <td>${data.pago}</td>
         <td>S/ ${monto.toFixed(2)}</td>
+        <td>${diasPagados} día(s)</td>
       `;
       tabla.appendChild(fila);
     });
 
-    totalDiv.textContent = `Total pagado: S/ ${total.toFixed(2)}`;
+    totalDiv.textContent = `Total pagado: S/ ${totalMonto.toFixed(2)}`;
+    totalDiasDiv.textContent = `Total de días pagados: ${totalDias}`;
   }
 
   cargarRegistros();
