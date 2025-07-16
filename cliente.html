@@ -2,113 +2,178 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Vista del Cliente - Junta de Cobros</title>
+  <title>Calendario de Pagos 2025</title>
   <style>
-    body { font-family: Arial; background: #f4f4f4; padding: 20px; }
-    h2 { color: #333; }
-    table {
-      width: 100%;
-      background: white;
-      border-collapse: collapse;
-      border-radius: 8px;
-      box-shadow: 0 0 10px #ccc;
-      margin-top: 20px;
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      padding: 20px;
     }
-    th, td {
-      padding: 10px;
-      border: 1px solid #ccc;
+    h1 {
       text-align: center;
+      color: #003366;
     }
-    .pago { background-color: #d4edda; }
-    .no-pago { background-color: #f8d7da; }
-    #totalPagado, #totalDias {
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
       margin-top: 20px;
-      font-size: 18px;
+    }
+    .calendario {
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 10px;
+      box-shadow: 0 0 5px #aaa;
+    }
+    .mes-titulo {
+      text-align: center;
       font-weight: bold;
-      color: #155724;
+      font-size: 18px;
+      color: #005599;
+      margin-bottom: 10px;
+    }
+    .dias {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      text-align: center;
+      color: #333;
+    }
+    .dias .encabezado {
+      font-weight: bold;
+      color: #555;
+      padding: 5px;
+    }
+    .dia {
+      padding: 8px;
+      min-height: 30px;
+      border-radius: 4px;
+      margin: 1px;
+      font-size: 14px;
+    }
+    .vacio {
+      background: none;
+    }
+    .pagado {
+      background-color: #c8f7c5;
+    }
+    .no-pagado {
+      background-color: #f7c5c5;
     }
   </style>
 </head>
 <body>
 
-<h2>CLIENTE - Historial de Pagos</h2>
-
-<table>
-  <thead>
-    <tr>
-      <th>Fecha</th>
-      <th>Día</th>
-      <th>Pagó</th>
-      <th>Monto</th>
-      <th>Días Pagados</th>
-    </tr>
-  </thead>
-  <tbody id="tablaCliente"></tbody>
-</table>
-
-<div id="totalPagado">Total pagado: S/ 0.00</div>
-<div id="totalDias">Total de días pagados: 0</div>
+<h1>Calendario de Pagos 2025</h1>
+<div class="grid" id="contenedorCalendarios"></div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import {
-    getFirestore, collection, getDocs, query, orderBy
-  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAapctHWYLZQB2AJq93PaHIO8a-D525h84",
     authDomain: "junta-cobros.firebaseapp.com",
     projectId: "junta-cobros",
-    storageBucket: "junta-cobros.firebasestorage.app",
+    storageBucket: "junta-cobros.appspot.com",
     messagingSenderId: "114984888186",
     appId: "1:114984888186:web:f526903357bb8039d618c3"
   };
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
+  const contenedor = document.getElementById("contenedorCalendarios");
 
-  const tabla = document.getElementById("tablaCliente");
-  const totalDiv = document.getElementById("totalPagado");
-  const totalDiasDiv = document.getElementById("totalDias");
+  const meses = [
+    { mes: 7, nombre: "Julio", anio: 2025 },
+    { mes: 8, nombre: "Agosto", anio: 2025 },
+    { mes: 9, nombre: "Septiembre", anio: 2025 },
+    { mes: 10, nombre: "Octubre", anio: 2025 },
+    { mes: 11, nombre: "Noviembre", anio: 2025 },
+    { mes: 12, nombre: "Diciembre", anio: 2025 }
+  ];
 
-  async function cargarRegistros() {
-    tabla.innerHTML = "";
-    let totalMonto = 0;
-    let totalDias = 0;
+  const diasSemana = ["D", "L", "M", "M", "J", "V", "S"];
 
-    const q = query(collection(db, "registrosCobro"), orderBy("fecha"));
-    const snapshot = await getDocs(q);
+  function obtenerDiasPagadosDesde(fechaInicioStr, dias) {
+    const fechas = [];
+    const [a, m, d] = fechaInicioStr.split('-');
+    const fechaBase = new Date(+a, +m - 1, +d);
+
+    for (let i = 0; i < dias; i++) {
+      const fechaNueva = new Date(fechaBase);
+      fechaNueva.setDate(fechaBase.getDate() + i);
+      const fechaFormateada = fechaNueva.toISOString().split('T')[0];
+      fechas.push(fechaFormateada);
+    }
+
+    return fechas;
+  }
+
+  async function cargarPagos() {
+    const snapshot = await getDocs(collection(db, "registrosCobro"));
+    const fechasPagadas = new Set();
 
     snapshot.forEach(doc => {
       const data = doc.data();
-      const fechaDate = data.fecha.toDate(); // ✅ Convertir Timestamp a Date
-      const fechaTexto = fechaDate.toISOString().split("T")[0];
-
-      const monto = data.pago === "Sí" ? parseFloat(data.monto) : 0;
-      const diasPagados = data.pago === "Sí" ? Math.floor(monto / 70) : 0;
-
-      totalMonto += monto;
-      totalDias += diasPagados;
-
-      const fila = document.createElement("tr");
-      fila.className = data.pago === "Sí" ? "pago" : "no-pago";
-
-      fila.innerHTML = `
-        <td>${fechaTexto}</td>
-        <td>${data.dia}</td>
-        <td>${data.pago}</td>
-        <td>S/ ${monto.toFixed(2)}</td>
-        <td>${diasPagados}</td>
-      `;
-
-      tabla.appendChild(fila);
+      if (data.pago === "Sí" && data.fecha) {
+        const dias = Math.floor(parseFloat(data.monto) / 70);
+        const fechas = obtenerDiasPagadosDesde(data.fecha, dias);
+        fechas.forEach(f => fechasPagadas.add(f));
+      }
     });
 
-    totalDiv.textContent = `Total pagado: S/ ${totalMonto.toFixed(2)}`;
-    totalDiasDiv.textContent = `Total de días pagados: ${totalDias}`;
+    meses.forEach(({ mes, nombre, anio }) => {
+      const fechaInicio = new Date(anio, mes - 1, 1);
+      const totalDias = new Date(anio, mes, 0).getDate();
+      const primerDia = fechaInicio.getDay();
+
+      const calendario = document.createElement("div");
+      calendario.className = "calendario";
+
+      const titulo = document.createElement("div");
+      titulo.className = "mes-titulo";
+      titulo.textContent = `${nombre} ${anio}`;
+      calendario.appendChild(titulo);
+
+      const encabezado = document.createElement("div");
+      encabezado.className = "dias";
+      diasSemana.forEach(d => {
+        const dia = document.createElement("div");
+        dia.className = "encabezado";
+        dia.textContent = d;
+        encabezado.appendChild(dia);
+      });
+      calendario.appendChild(encabezado);
+
+      const cuerpo = document.createElement("div");
+      cuerpo.className = "dias";
+
+      for (let i = 0; i < primerDia; i++) {
+        const vacio = document.createElement("div");
+        vacio.className = "dia vacio";
+        cuerpo.appendChild(vacio);
+      }
+
+      for (let d = 1; d <= totalDias; d++) {
+        const dia = document.createElement("div");
+        dia.className = "dia";
+        const fechaStr = `${anio}-${String(mes).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+        if (fechasPagadas.has(fechaStr)) {
+          dia.classList.add("pagado");
+        }
+
+        dia.textContent = d;
+        cuerpo.appendChild(dia);
+      }
+
+      calendario.appendChild(cuerpo);
+      contenedor.appendChild(calendario);
+    });
   }
 
-  cargarRegistros();
+  cargarPagos();
 </script>
 
 </body>
