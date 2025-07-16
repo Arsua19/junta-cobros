@@ -4,14 +4,8 @@
   <meta charset="UTF-8">
   <title>Vista del Cliente - Junta de Cobros</title>
   <style>
-    body {
-      font-family: Arial;
-      background: #f4f4f4;
-      padding: 20px;
-    }
-    h2 {
-      color: #333;
-    }
+    body { font-family: Arial; background: #f4f4f4; padding: 20px; }
+    h2 { color: #333; }
     table {
       width: 100%;
       background: white;
@@ -25,12 +19,8 @@
       border: 1px solid #ccc;
       text-align: center;
     }
-    .pago {
-      background-color: #d4edda;
-    }
-    .no-pago {
-      background-color: #f8d7da;
-    }
+    .pago { background-color: #d4edda; }
+    .no-pago { background-color: #f8d7da; }
     #totalPagado, #totalDias {
       margin-top: 20px;
       font-size: 18px;
@@ -50,6 +40,7 @@
       <th>Día</th>
       <th>Pagó</th>
       <th>Monto</th>
+      <th>Días Pagados</th>
     </tr>
   </thead>
   <tbody id="tablaCliente"></tbody>
@@ -61,14 +52,14 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import {
-    getFirestore, collection, getDocs
+    getFirestore, collection, getDocs, query, orderBy
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAapctHWYLZQB2AJq93PaHIO8a-D525h84",
     authDomain: "junta-cobros.firebaseapp.com",
     projectId: "junta-cobros",
-    storageBucket: "junta-cobros.appspot.com",
+    storageBucket: "junta-cobros.firebasestorage.app",
     messagingSenderId: "114984888186",
     appId: "1:114984888186:web:f526903357bb8039d618c3"
   };
@@ -85,28 +76,16 @@
     let totalMonto = 0;
     let totalDias = 0;
 
-    const snapshot = await getDocs(collection(db, "registrosCobro"));
-    const registros = [];
+    const q = query(collection(db, "registrosCobro"), orderBy("fecha"));
+    const snapshot = await getDocs(q);
 
     snapshot.forEach(doc => {
       const data = doc.data();
+      const fechaDate = data.fecha.toDate(); // ✅ Convertir Timestamp a Date
+      const fechaTexto = fechaDate.toISOString().split("T")[0];
 
-      if (data.fecha && typeof data.fecha === "string") {
-        const fechaLimpia = data.fecha.trim();
-        const fechaDate = new Date(fechaLimpia);
-
-        if (!isNaN(fechaDate)) {
-          registros.push({ ...data, fechaDate });
-        }
-      }
-    });
-
-    // Ordenar los registros por la fecha convertida
-    registros.sort((a, b) => a.fechaDate - b.fechaDate);
-
-    registros.forEach(data => {
-      const monto = data.pago === "Sí" ? parseFloat(data.monto) || 0 : 0;
-      const diasPagados = data.pago === "Sí" ? (data.diasPagados || 0) : 0;
+      const monto = data.pago === "Sí" ? parseFloat(data.monto) : 0;
+      const diasPagados = data.pago === "Sí" ? Math.floor(monto / 70) : 0;
 
       totalMonto += monto;
       totalDias += diasPagados;
@@ -115,10 +94,11 @@
       fila.className = data.pago === "Sí" ? "pago" : "no-pago";
 
       fila.innerHTML = `
-        <td>${data.fecha}</td>
+        <td>${fechaTexto}</td>
         <td>${data.dia}</td>
         <td>${data.pago}</td>
         <td>S/ ${monto.toFixed(2)}</td>
+        <td>${diasPagados}</td>
       `;
 
       tabla.appendChild(fila);
