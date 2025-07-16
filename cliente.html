@@ -1,4 +1,4 @@
-   <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -61,7 +61,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import {
-    getFirestore, collection, getDocs, query, orderBy
+    getFirestore, collection, getDocs
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -85,20 +85,24 @@
     let totalMonto = 0;
     let totalDias = 0;
 
-    const q = query(collection(db, "registrosCobro"), orderBy("fecha"));
-    const snapshot = await getDocs(q);
-
-    // Arreglo para ordenar por fecha
+    const snapshot = await getDocs(collection(db, "registrosCobro"));
     const registros = [];
+
     snapshot.forEach(doc => {
       const data = doc.data();
-      if (data.fecha) {
-        registros.push(data);
+
+      if (data.fecha && typeof data.fecha === "string") {
+        const fechaLimpia = data.fecha.trim();
+        const fechaDate = new Date(fechaLimpia);
+
+        if (!isNaN(fechaDate)) {
+          registros.push({ ...data, fechaDate });
+        }
       }
     });
 
-    // Ordenar por fecha ascendente (por seguridad)
-    registros.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+    // Ordenar los registros por la fecha convertida
+    registros.sort((a, b) => a.fechaDate - b.fechaDate);
 
     registros.forEach(data => {
       const monto = data.pago === "Sí" ? parseFloat(data.monto) || 0 : 0;
