@@ -2,169 +2,53 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Calendario de Pagos 2025</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      padding: 20px;
-    }
-    h1 {
-      text-align: center;
-      color: #003366;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 20px;
-      margin-top: 20px;
-    }
-    .calendario {
-      background: white;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      padding: 10px;
-      box-shadow: 0 0 5px #aaa;
-    }
-    .mes-titulo {
-      text-align: center;
-      font-weight: bold;
-      font-size: 18px;
-      color: #005599;
-      margin-bottom: 10px;
-    }
-    .dias {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      text-align: center;
-      color: #333;
-    }
-    .dias .encabezado {
-      font-weight: bold;
-      color: #555;
-      padding: 5px;
-    }
-    .dia {
-      padding: 8px;
-      min-height: 30px;
-      border-radius: 4px;
-      margin: 1px;
-      font-size: 14px;
-    }
-    .vacio {
-      background: none;
-    }
-    .pagado {
-      background-color: #c8f7c5;
-    }
-    .no-pagado {
-      background-color: #f7c5c5;
-    }
-  </style>
+  <title>Insertar Pagos</title>
 </head>
 <body>
+  <h2>Insertando registros...</h2>
 
-<h1>Calendario de Pagos 2025</h1>
-<div class="grid" id="contenedorCalendarios"></div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyAapctHWYLZQB2AJq93PaHIO8a-D525h84",
+      authDomain: "junta-cobros.firebaseapp.com",
+      projectId: "junta-cobros",
+      storageBucket: "junta-cobros.appspot.com",
+      messagingSenderId: "114984888186",
+      appId: "1:114984888186:web:f526903357bb8039d618c3"
+    };
 
-  // Configuración de Firebase
-  const firebaseConfig = {
-    apiKey: "AIzaSyAapctHWYLZQB2AJq93PaHIO8a-D525h84",
-    authDomain: "junta-cobros.firebaseapp.com",
-    projectId: "junta-cobros",
-    storageBucket: "junta-cobros.appspot.com",
-    messagingSenderId: "114984888186",
-    appId: "1:114984888186:web:f526903357bb8039d618c3"
-  };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const contenedor = document.getElementById("contenedorCalendarios");
+    async function insertarPagosJulio() {
+      const diasMes = 31;
+      const mes = "07";
+      const anio = "2025";
+      const montoPorDia = 70;
 
-  // Meses a mostrar (puedes agregar más)
-  const meses = [
-    { mes: 7, nombre: "Julio", anio: 2025 },
-    { mes: 8, nombre: "Agosto", anio: 2025 },
-    { mes: 9, nombre: "Septiembre", anio: 2025 },
-    { mes: 10, nombre: "Octubre", anio: 2025 },
-    { mes: 11, nombre: "Noviembre", anio: 2025 },
-    { mes: 12, nombre: "Diciembre", anio: 2025 }
-  ];
+      for (let d = 12; d <= diasMes; d++) {
+        const fecha = `${anio}-${mes}-${String(d).padStart(2, '0')}`;
+        const diaSemana = new Date(`${anio}-${mes}-${String(d).padStart(2, '0')}`).toLocaleDateString("es-PE", { weekday: 'long' }).toUpperCase();
 
-  const diasSemana = ["D", "L", "M", "M", "J", "V", "S"];
+        const registro = {
+          fecha: fecha,
+          dia: diaSemana,
+          pago: "Sí",
+          monto: montoPorDia.toFixed(2),
+          diasPagados: 1
+        };
 
-  async function cargarPagos() {
-    const snapshot = await getDocs(collection(db, "registrosCobro"));
-    const registros = {};
-
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      if (data.fecha && data.pago) {
-        registros[data.fecha] = data.pago;
-      }
-    });
-
-    meses.forEach(({ mes, nombre, anio }) => {
-      const fechaInicio = new Date(anio, mes - 1, 1);
-      const totalDias = new Date(anio, mes, 0).getDate();
-      const primerDia = fechaInicio.getDay();
-
-      const calendario = document.createElement("div");
-      calendario.className = "calendario";
-
-      const titulo = document.createElement("div");
-      titulo.className = "mes-titulo";
-      titulo.textContent = `${nombre} ${anio}`;
-      calendario.appendChild(titulo);
-
-      const encabezado = document.createElement("div");
-      encabezado.className = "dias";
-      diasSemana.forEach(d => {
-        const dia = document.createElement("div");
-        dia.className = "encabezado";
-        dia.textContent = d;
-        encabezado.appendChild(dia);
-      });
-      calendario.appendChild(encabezado);
-
-      const cuerpo = document.createElement("div");
-      cuerpo.className = "dias";
-
-      // Espacios vacíos antes del primer día del mes
-      for (let i = 0; i < primerDia; i++) {
-        const vacio = document.createElement("div");
-        vacio.className = "dia vacio";
-        cuerpo.appendChild(vacio);
+        await addDoc(collection(db, "registrosCobro"), registro);
+        console.log(`✔️ Registro agregado para ${fecha}`);
       }
 
-      // Días del mes
-      for (let d = 1; d <= totalDias; d++) {
-        const dia = document.createElement("div");
-        dia.className = "dia";
-        const fechaStr = `${anio}-${String(mes).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-        const pago = registros[fechaStr];
+      console.log("✅ Todos los registros del 12 al 31 de julio se insertaron correctamente.");
+    }
 
-        if (pago === "Sí") {
-          dia.classList.add("pagado");
-        } else if (pago === "No") {
-          dia.classList.add("no-pagado");
-        }
-
-        dia.textContent = d;
-        cuerpo.appendChild(dia);
-      }
-
-      calendario.appendChild(cuerpo);
-      contenedor.appendChild(calendario);
-    });
-  }
-
-  cargarPagos();
-</script>
-
+    insertarPagosJulio();
+  </script>
 </body>
 </html>
