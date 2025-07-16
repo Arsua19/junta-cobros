@@ -55,6 +55,7 @@
     getFirestore, collection, getDocs, query, orderBy
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+  // Configuración Firebase
   const firebaseConfig = {
     apiKey: "AIzaSyAapctHWYLZQB2AJq93PaHIO8a-D525h84",
     authDomain: "junta-cobros.firebaseapp.com",
@@ -81,10 +82,8 @@
 
     snapshot.forEach(doc => {
       const data = doc.data();
-
-      // Solo consideramos pagos confirmados
-      const monto = data.pago === "Sí" ? parseFloat(data.monto) : 0;
-      const diasPagados = data.pago === "Sí" ? Math.floor(monto / 70) : 0;
+      const monto = data.pago === "Sí" ? parseFloat(data.monto) || 0 : 0;
+      const diasPagados = data.pago === "Sí" ? (data.diasPagados || 0) : 0;
 
       totalMonto += monto;
       totalDias += diasPagados;
