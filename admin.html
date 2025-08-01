@@ -80,7 +80,7 @@
     e.preventDefault();
 
     const fechaStr = document.getElementById("fecha").value;
-    const fecha = Timestamp.fromDate(new Date(fechaStr)); // ✅ Timestamp
+    const fecha = Timestamp.fromDate(new Date(fechaStr));
     const dia = document.getElementById("dia").value;
     const pago = document.getElementById("pago").value;
     const monto = parseFloat(document.getElementById("monto").value).toFixed(2);
@@ -101,7 +101,7 @@
 
     snapshot.forEach(docSnap => {
       const data = docSnap.data();
-      const fechaDate = data.fecha.toDate(); // ✅ Convertir Timestamp a Date
+      const fechaDate = data.fecha.toDate();
       const fechaTexto = fechaDate.toISOString().split("T")[0];
       const dias = data.pago === "Sí" ? (data.diasPagados || 0) : 0;
       total += dias;
@@ -161,29 +161,8 @@
   }
 
   cargarRegistros();
-
-  // ✅ Script temporal para convertir fechas string a Timestamp
-  async function convertirFechasAntiguas() {
-    const snap = await getDocs(collection(db, "registrosCobro"));
-    for (const docSnap of snap.docs) {
-      const data = docSnap.data();
-      if (typeof data.fecha === "string") {
-        try {
-          const nuevaFecha = Timestamp.fromDate(new Date(data.fecha));
-          await updateDoc(doc(db, "registrosCobro", docSnap.id), {
-            fecha: nuevaFecha
-          });
-          console.log(`✅ Actualizado: ${docSnap.id}`);
-        } catch (e) {
-          console.error(`❌ Error en ${docSnap.id}:`, e);
-        }
-      }
-    }
-    console.log("🟢 Conversión de fechas completada.");
-  }
-
-  convertirFechasAntiguas(); // Ejecuta automáticamente una vez
 </script>
 
 </body>
 </html>
+
