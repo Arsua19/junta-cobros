@@ -118,6 +118,7 @@
       snapshot.forEach(doc => {
         const data = doc.data();
 
+        const fechaTexto = data.fecha.toDate().toISOString().split("T")[0]; // ✅ Fecha legible
         const monto = data.pago === "Sí" ? parseFloat(data.monto) : 0;
         const diasPagados = data.pago === "Sí" ? Math.floor(monto / 70) : 0;
 
@@ -128,7 +129,7 @@
         fila.className = data.pago === "Sí" ? "pago" : "no-pago";
 
         fila.innerHTML = `
-          <td>${data.fecha}</td>
+          <td>${fechaTexto}</td>
           <td>${data.dia}</td>
           <td>${data.pago}</td>
           <td>S/ ${monto.toFixed(2)}</td>
