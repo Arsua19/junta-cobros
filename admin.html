@@ -78,12 +78,13 @@
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+
     const fechaStr = document.getElementById("fecha").value;
-    const fecha = Timestamp.fromDate(new Date(fechaStr));
+    const fecha = Timestamp.fromDate(new Date(fechaStr)); // ✅ Timestamp
     const dia = document.getElementById("dia").value;
     const pago = document.getElementById("pago").value;
-    const monto = parseFloat(document.getElementById("monto").value);
-    const diasPagados = pago === "Sí" ? Math.floor(monto / 70) : 0;
+    const monto = parseFloat(document.getElementById("monto").value).toFixed(2);
+    const diasPagados = Math.floor(monto / 70);
 
     const nuevo = { fecha, dia, pago, monto, diasPagados };
     await addDoc(collection(db, "registrosCobro"), nuevo);
@@ -100,12 +101,13 @@
 
     snapshot.forEach(docSnap => {
       const data = docSnap.data();
-
-      let fechaTexto = "Sin fecha";
-      if (data.fecha && typeof data.fecha.toDate === "function") {
+      
+      // ✅ Manejar Timestamp y string
+      let fechaTexto = "";
+      if (data.fecha.toDate) {
         fechaTexto = data.fecha.toDate().toISOString().split("T")[0];
-      } else if (typeof data.fecha === "string") {
-        fechaTexto = data.fecha;
+      } else {
+        fechaTexto = new Date(data.fecha).toISOString().split("T")[0];
       }
 
       const dias = data.pago === "Sí" ? (data.diasPagados || 0) : 0;
@@ -118,10 +120,10 @@
         <td>${fechaTexto}</td>
         <td>${data.dia}</td>
         <td>${data.pago}</td>
-        <td>S/ ${data.pago === "Sí" ? parseFloat(data.monto).toFixed(2) : "0.00"}</td>
+        <td>S/ ${data.pago === "Sí" ? data.monto : "0.00"}</td>
         <td>${dias} día(s)</td>
         <td>
-          <button class="btn-editar" data-id="${docSnap.id}" data-fecha="${fechaTexto}">Editar</button>
+          <button class="btn-editar" data-id="${docSnap.id}">Editar</button>
           <button class="btn-eliminar" data-id="${docSnap.id}">Eliminar</button>
         </td>
       `;
@@ -143,20 +145,20 @@
     document.querySelectorAll(".btn-editar").forEach(btn => {
       btn.addEventListener("click", async () => {
         const id = btn.dataset.id;
-        const fechaActual = btn.dataset.fecha;
         const fila = btn.closest("tr");
+        const fechaActual = fila.children[0].textContent;
         const nuevoDia = prompt("Nuevo día:", fila.children[1].textContent);
         const nuevoPago = prompt("¿Pagó? (Sí/No):", fila.children[2].textContent);
         const nuevoMonto = prompt("Nuevo monto:", fila.children[3].textContent.replace("S/ ", ""));
 
-        if (nuevoDia && (nuevoPago === "Sí" || nuevoPago === "No") && nuevoMonto) {
+        if (fechaActual && nuevoDia && (nuevoPago === "Sí" || nuevoPago === "No") && nuevoMonto) {
           const nuevaFecha = Timestamp.fromDate(new Date(fechaActual));
-          const diasPagados = nuevoPago === "Sí" ? Math.floor(parseFloat(nuevoMonto) / 70) : 0;
+          const diasPagados = Math.floor(parseFloat(nuevoMonto) / 70);
           await updateDoc(doc(db, "registrosCobro", id), {
             fecha: nuevaFecha,
             dia: nuevoDia,
             pago: nuevoPago,
-            monto: parseFloat(nuevoMonto),
+            monto: parseFloat(nuevoMonto).toFixed(2),
             diasPagados
           });
           cargarRegistros();
