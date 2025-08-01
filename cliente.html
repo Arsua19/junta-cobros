@@ -118,25 +118,26 @@
       snapshot.forEach(doc => {
         const data = doc.data();
 
-        let fechaTexto = "Sin fecha";
-        if (data.fecha && typeof data.fecha.toDate === "function") {
-          const fecha = data.fecha.toDate();
-          fechaTexto = fecha.toLocaleDateString("es-PE");
-        }
-
         const monto = data.pago === "Sí" ? parseFloat(data.monto) : 0;
         const diasPagados = data.pago === "Sí" ? Math.floor(monto / 70) : 0;
-
         totalMonto += monto;
         totalDias += diasPagados;
+
+        // Manejo de fecha robusto: puede ser Timestamp o string
+        let fechaTexto = "Sin fecha";
+        if (data.fecha && typeof data.fecha.toDate === "function") {
+          fechaTexto = data.fecha.toDate().toISOString().split("T")[0];
+        } else if (typeof data.fecha === "string") {
+          fechaTexto = data.fecha;
+        }
 
         const fila = document.createElement("tr");
         fila.className = data.pago === "Sí" ? "pago" : "no-pago";
 
         fila.innerHTML = `
           <td>${fechaTexto}</td>
-          <td>${data.dia}</td>
-          <td>${data.pago}</td>
+          <td>${data.dia || ""}</td>
+          <td>${data.pago || "No"}</td>
           <td>S/ ${monto.toFixed(2)}</td>
           <td>${diasPagados}</td>
         `;
@@ -153,7 +154,3 @@
 
 </body>
 </html>
-
-       
-        
-
