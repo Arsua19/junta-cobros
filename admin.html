@@ -155,44 +155,5 @@
 
     cargarRegistros();
   </script>
-
-  <!-- ✅ Script TEMPORAL para actualizar fechas antiguas (string) a Timestamp -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import {
-      getFirestore, collection, getDocs, doc, updateDoc, Timestamp
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-    const app = initializeApp({
-      apiKey: "AIzaSyAapctHWYLZQB2AJq93PaHIO8a-D525h84",
-      authDomain: "junta-cobros.firebaseapp.com",
-      projectId: "junta-cobros"
-    });
-
-    const db = getFirestore(app);
-
-    async function actualizarFechasAntiguas() {
-      const snapshot = await getDocs(collection(db, "registrosCobro"));
-      let actualizados = 0;
-
-      for (const docSnap of snapshot.docs) {
-        const data = docSnap.data();
-
-        if (typeof data.fecha === "string") {
-          try {
-            const nuevaFecha = Timestamp.fromDate(new Date(data.fecha));
-            await updateDoc(doc(db, "registrosCobro", docSnap.id), { fecha: nuevaFecha });
-            actualizados++;
-          } catch (err) {
-            console.error(`Error al actualizar fecha en doc ${docSnap.id}:`, err);
-          }
-        }
-      }
-
-      alert(`✅ Fechas actualizadas: ${actualizados}`);
-    }
-
-    actualizarFechasAntiguas();
-  </script>
 </body>
 </html>
