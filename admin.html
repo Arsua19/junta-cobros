@@ -1,47 +1,62 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Historial de Pagos - Cliente</title>
+  <meta charset="UTF-8" />
+  <title>Administrador - Junta de Cobros</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 20px;
+      margin: 40px;
       background-color: #f5f5f5;
     }
-    h2 {
+    h1 {
       text-align: center;
+    }
+    form {
+      margin-bottom: 20px;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+    }
+    input, select, button {
+      padding: 10px;
+      margin: 5px;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 20px;
-      background-color: white;
+      background: #fff;
     }
     th, td {
-      border: 1px solid #ddd;
       padding: 10px;
+      border: 1px solid #ccc;
       text-align: center;
     }
-    th {
-      background-color: #007BFF;
-      color: white;
-    }
-    tr.pago {
+    .pagado {
       background-color: #d4edda;
     }
-    tr.no-pago {
+    .no-pagado {
       background-color: #f8d7da;
-    }
-    #totales {
-      margin-top: 20px;
-      text-align: center;
     }
   </style>
 </head>
 <body>
+  <h1>Panel Administrador</h1>
 
-  <h2>Historial de Pagos del Cliente</h2>
+  <form id="registroForm">
+    <label>Fecha:</label>
+    <input type="date" id="fecha" required>
+    <label>Día:</label>
+    <input type="text" id="dia" required>
+    <label>¿Pagó?</label>
+    <select id="pago">
+      <option value="Sí">Sí</option>
+      <option value="No">No</option>
+    </select>
+    <label>Monto:</label>
+    <input type="number" id="monto" step="0.01" required>
+    <button type="submit">Agregar</button>
+  </form>
 
   <table>
     <thead>
@@ -51,20 +66,16 @@
         <th>¿Pagó?</th>
         <th>Monto</th>
         <th>Días Pagados</th>
+        <th>Acciones</th>
       </tr>
     </thead>
-    <tbody id="tablaCliente"></tbody>
+    <tbody id="tablaAdmin"></tbody>
   </table>
-
-  <div id="totales">
-    <p id="totalPagado">Total pagado: S/ 0.00</p>
-    <p id="totalDias">Total de días pagados: 0</p>
-  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import {
-      getFirestore, collection, getDocs, query, orderBy
+      getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, Timestamp
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -78,59 +89,72 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const form = document.getElementById("registroForm");
+    const tabla = document.getElementById("tablaAdmin");
 
-    const tabla = document.getElementById("tablaCliente");
-    const totalDiv = document.getElementById("totalPagado");
-    const totalDiasDiv = document.getElementById("totalDias");
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-    async function cargarRegistros() {
+      const fechaInput = document.getElementById("fecha").value;
+      const dia = document.getElementById("dia").value;
+      const pago = document.getElementById("pago").value;
+      const monto = parseFloat(document.getElementById("monto").value);
+
+      const fechaTimestamp = Timestamp.fromDate(new Date(fechaInput));
+
+      await addDoc(collection(db, "registrosCobro"), {
+        fecha: fechaTimestamp,
+        dia,
+        pago,
+        monto
+      });
+
+      form.reset();
+      cargarDatos();
+    });
+
+    async function cargarDatos() {
       tabla.innerHTML = "";
-      let totalMonto = 0;
-      let totalDias = 0;
-
       const q = query(collection(db, "registrosCobro"), orderBy("fecha"));
       const snapshot = await getDocs(q);
 
-      snapshot.forEach(doc => {
-        const data = doc.data();
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const id = docSnap.id;
 
-        // 🔄 Convertir fecha a string legible
-        let fechaMostrada = "";
+        // Mostrar fecha correctamente
+        let fechaMostrada = "—";
         if (data.fecha && typeof data.fecha === "object" && data.fecha.toDate) {
-          const fechaObj = data.fecha.toDate();
-          fechaMostrada = fechaObj.toLocaleDateString();
+          fechaMostrada = data.fecha.toDate().toLocaleDateString();
         } else if (typeof data.fecha === "string") {
           fechaMostrada = data.fecha;
-        } else {
-          fechaMostrada = "—";
         }
 
         const monto = data.pago === "Sí" ? parseFloat(data.monto) : 0;
         const diasPagados = data.pago === "Sí" ? Math.floor(monto / 70) : 0;
 
-        totalMonto += monto;
-        totalDias += diasPagados;
+        const tr = document.createElement("tr");
+        tr.className = data.pago === "Sí" ? "pagado" : "no-pagado";
 
-        const fila = document.createElement("tr");
-        fila.className = data.pago === "Sí" ? "pago" : "no-pago";
-
-        fila.innerHTML = `
+        tr.innerHTML = `
           <td>${fechaMostrada}</td>
-          <td>${data.dia || "—"}</td>
-          <td>${data.pago || "—"}</td>
+          <td>${data.dia}</td>
+          <td>${data.pago}</td>
           <td>S/ ${monto.toFixed(2)}</td>
           <td>${diasPagados}</td>
+          <td><button onclick="eliminar('${id}')">Eliminar</button></td>
         `;
 
-        tabla.appendChild(fila);
+        tabla.appendChild(tr);
       });
-
-      totalDiv.textContent = `Total pagado: S/ ${totalMonto.toFixed(2)}`;
-      totalDiasDiv.textContent = `Total de días pagados: ${totalDias}`;
     }
 
-    cargarRegistros();
-  </script>
+    window.eliminar = async function(id) {
+      await deleteDoc(doc(db, "registrosCobro", id));
+      cargarDatos();
+    };
 
+    cargarDatos();
+  </script>
 </body>
 </html>
