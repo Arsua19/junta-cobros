@@ -1,174 +1,198 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Administrador - Junta de Cobros</title>
   <style>
-    body { font-family: Arial; background: #f4f4f4; padding: 20px; }
-    h2 { color: #333; }
-    form, table { background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 0 10px #ccc; }
-    input, select { width: 100%; padding: 8px; margin: 5px 0; }
-    button { padding: 10px 15px; background: green; color: white; border: none; border-radius: 5px; cursor: pointer; }
-    table { width: 100%; margin-top: 20px; border-collapse: collapse; }
-    th, td { padding: 10px; border: 1px solid #ccc; text-align: center; }
-    .pago { background-color: #d4edda; }
-    .no-pago { background-color: #f8d7da; }
-    .btn-eliminar { background: red; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
-    .btn-editar { background: orange; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
-    #totalDias { margin-top: 15px; font-weight: bold; font-size: 1.1em; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f2f2f2;
+    }
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+    form {
+      margin-bottom: 20px;
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    form input, form select, form button {
+      margin: 8px 4px;
+      padding: 6px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 10px;
+      text-align: center;
+      border-bottom: 1px solid #ccc;
+    }
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    .pagado {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .no-pagado {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
   </style>
 </head>
 <body>
+  <h2>📋 Panel del Administrador - Junta de Cobros</h2>
 
-<h2>ADMINISTRADOR - Registrar Pagos</h2>
+  <form id="formulario">
+    <input type="date" id="fecha" required />
+    <input type="text" id="dia" placeholder="Día (ej. Lunes)" required />
+    <input type="number" id="monto" placeholder="Monto S/" required />
+    <select id="pago" required>
+      <option value="">¿Pagó?</option>
+      <option value="Sí">Sí</option>
+      <option value="No">No</option>
+    </select>
+    <button type="submit">Registrar</button>
+  </form>
 
-<form id="formulario">
-  <label>Fecha:</label>
-  <input type="date" id="fecha" required>
-  <label>Día:</label>
-  <input type="text" id="dia" required>
-  <label>¿Pagó?:</label>
-  <select id="pago">
-    <option value="Sí">Sí</option>
-    <option value="No">No</option>
-  </select>
-  <label>Monto (S/):</label>
-  <input type="number" id="monto" min="0" step="0.01" required>
-  <button type="submit">Agregar Registro</button>
-</form>
+  <table>
+    <thead>
+      <tr>
+        <th>📅 Fecha</th>
+        <th>🗓 Día</th>
+        <th>💵 ¿Pagó?</th>
+        <th>💰 Monto</th>
+        <th>🧮 Días Pagados</th>
+        <th>🗑️ Acción</th>
+      </tr>
+    </thead>
+    <tbody id="tablaRegistros"></tbody>
+  </table>
 
-<table>
-  <thead>
-    <tr>
-      <th>Fecha</th>
-      <th>Día</th>
-      <th>Pagó</th>
-      <th>Monto</th>
-      <th>Días Pagados</th>
-      <th>Acciones</th>
-    </tr>
-  </thead>
-  <tbody id="tablaRegistros"></tbody>
-</table>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getFirestore, collection, addDoc, getDocs, query, orderBy,
+      deleteDoc, doc, Timestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-<div id="totalDias">Total de días pagados: 0</div>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAapctHWYLZQB2AJq93PaHIO8a-D525h84",
+      authDomain: "junta-cobros.firebaseapp.com",
+      projectId: "junta-cobros",
+      storageBucket: "junta-cobros.appspot.com",
+      messagingSenderId: "114984888186",
+      appId: "1:114984888186:web:f526903357bb8039d618c3"
+    };
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import {
-    getFirestore, collection, addDoc, getDocs, deleteDoc,
-    doc, updateDoc, query, orderBy, Timestamp
-  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyAapctHWYLZQB2AJq93PaHIO8a-D525h84",
-    authDomain: "junta-cobros.firebaseapp.com",
-    projectId: "junta-cobros",
-    storageBucket: "junta-cobros.firebasestorage.app",
-    messagingSenderId: "114984888186",
-    appId: "1:114984888186:web:f526903357bb8039d618c3"
-  };
+    const formulario = document.getElementById("formulario");
+    const tabla = document.getElementById("tablaRegistros");
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+    formulario.addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-  const form = document.getElementById("formulario");
-  const tabla = document.getElementById("tablaRegistros");
-  const totalDias = document.getElementById("totalDias");
+      const fecha = document.getElementById("fecha").value;
+      const dia = document.getElementById("dia").value;
+      const monto = document.getElementById("monto").value;
+      const pago = document.getElementById("pago").value;
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
+      const fechaTimestamp = Timestamp.fromDate(new Date(fecha));
 
-    const fechaStr = document.getElementById("fecha").value;
-    const fecha = Timestamp.fromDate(new Date(fechaStr)); // ✅ Timestamp
-    const dia = document.getElementById("dia").value;
-    const pago = document.getElementById("pago").value;
-    const monto = parseFloat(document.getElementById("monto").value).toFixed(2);
-    const diasPagados = Math.floor(monto / 70);
+      await addDoc(collection(db, "registrosCobro"), {
+        fecha: fechaTimestamp,
+        dia,
+        monto,
+        pago
+      });
 
-    const nuevo = { fecha, dia, pago, monto, diasPagados };
-    await addDoc(collection(db, "registrosCobro"), nuevo);
-    form.reset();
+      formulario.reset();
+      cargarRegistros();
+    });
+
+    async function cargarRegistros() {
+      tabla.innerHTML = "";
+      const q = query(collection(db, "registrosCobro"), orderBy("fecha"));
+      const snapshot = await getDocs(q);
+
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        const fechaTexto = data.fecha?.toDate ? data.fecha.toDate().toLocaleDateString() : data.fecha;
+
+        const fila = document.createElement("tr");
+        fila.className = data.pago === "Sí" ? "pagado" : "no-pagado";
+
+        const diasPagados = data.pago === "Sí" ? Math.floor(parseFloat(data.monto) / 70) : 0;
+
+        fila.innerHTML = `
+          <td>${fechaTexto}</td>
+          <td>${data.dia}</td>
+          <td>${data.pago}</td>
+          <td>S/ ${parseFloat(data.monto).toFixed(2)}</td>
+          <td>${diasPagados}</td>
+          <td><button onclick="eliminarRegistro('${docSnap.id}')">Eliminar</button></td>
+        `;
+
+        tabla.appendChild(fila);
+      });
+    }
+
+    window.eliminarRegistro = async (id) => {
+      await deleteDoc(doc(db, "registrosCobro", id));
+      cargarRegistros();
+    };
+
     cargarRegistros();
-  });
+  </script>
 
-  async function cargarRegistros() {
-    tabla.innerHTML = "";
-    let total = 0;
+  <!-- ✅ Script TEMPORAL para actualizar fechas antiguas (string) a Timestamp -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getFirestore, collection, getDocs, doc, updateDoc, Timestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    const q = query(collection(db, "registrosCobro"), orderBy("fecha"));
-    const snapshot = await getDocs(q);
+    const app = initializeApp({
+      apiKey: "AIzaSyAapctHWYLZQB2AJq93PaHIO8a-D525h84",
+      authDomain: "junta-cobros.firebaseapp.com",
+      projectId: "junta-cobros"
+    });
 
-    snapshot.forEach(docSnap => {
-      const data = docSnap.data();
-      
-      // ✅ Manejar Timestamp y string
-      let fechaTexto = "";
-      if (data.fecha.toDate) {
-        fechaTexto = data.fecha.toDate().toISOString().split("T")[0];
-      } else {
-        fechaTexto = new Date(data.fecha).toISOString().split("T")[0];
+    const db = getFirestore(app);
+
+    async function actualizarFechasAntiguas() {
+      const snapshot = await getDocs(collection(db, "registrosCobro"));
+      let actualizados = 0;
+
+      for (const docSnap of snapshot.docs) {
+        const data = docSnap.data();
+
+        if (typeof data.fecha === "string") {
+          try {
+            const nuevaFecha = Timestamp.fromDate(new Date(data.fecha));
+            await updateDoc(doc(db, "registrosCobro", docSnap.id), { fecha: nuevaFecha });
+            actualizados++;
+          } catch (err) {
+            console.error(`Error al actualizar fecha en doc ${docSnap.id}:`, err);
+          }
+        }
       }
 
-      const dias = data.pago === "Sí" ? (data.diasPagados || 0) : 0;
-      total += dias;
+      alert(`✅ Fechas actualizadas: ${actualizados}`);
+    }
 
-      const fila = document.createElement("tr");
-      fila.className = data.pago === "Sí" ? "pago" : "no-pago";
-
-      fila.innerHTML = `
-        <td>${fechaTexto}</td>
-        <td>${data.dia}</td>
-        <td>${data.pago}</td>
-        <td>S/ ${data.pago === "Sí" ? data.monto : "0.00"}</td>
-        <td>${dias} día(s)</td>
-        <td>
-          <button class="btn-editar" data-id="${docSnap.id}">Editar</button>
-          <button class="btn-eliminar" data-id="${docSnap.id}">Eliminar</button>
-        </td>
-      `;
-      tabla.appendChild(fila);
-    });
-
-    totalDias.textContent = `Total de días pagados: ${total}`;
-
-    document.querySelectorAll(".btn-eliminar").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const id = btn.dataset.id;
-        if (confirm("¿Seguro que deseas eliminar este registro?")) {
-          await deleteDoc(doc(db, "registrosCobro", id));
-          cargarRegistros();
-        }
-      });
-    });
-
-    document.querySelectorAll(".btn-editar").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const id = btn.dataset.id;
-        const fila = btn.closest("tr");
-        const fechaActual = fila.children[0].textContent;
-        const nuevoDia = prompt("Nuevo día:", fila.children[1].textContent);
-        const nuevoPago = prompt("¿Pagó? (Sí/No):", fila.children[2].textContent);
-        const nuevoMonto = prompt("Nuevo monto:", fila.children[3].textContent.replace("S/ ", ""));
-
-        if (fechaActual && nuevoDia && (nuevoPago === "Sí" || nuevoPago === "No") && nuevoMonto) {
-          const nuevaFecha = Timestamp.fromDate(new Date(fechaActual));
-          const diasPagados = Math.floor(parseFloat(nuevoMonto) / 70);
-          await updateDoc(doc(db, "registrosCobro", id), {
-            fecha: nuevaFecha,
-            dia: nuevoDia,
-            pago: nuevoPago,
-            monto: parseFloat(nuevoMonto).toFixed(2),
-            diasPagados
-          });
-          cargarRegistros();
-        }
-      });
-    });
-  }
-
-  cargarRegistros();
-</script>
-
+    actualizarFechasAntiguas();
+  </script>
 </body>
 </html>
